@@ -1,0 +1,60 @@
+{
+  "name": "ggi-secure-ai-chat-backend",
+  "version": "1.0.0",
+  "description": "Secure, DDD-style TypeScript backend: AI chat with monthly quotas and subscription bundles, OIDC + DPoP auth.",
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --watch --import tsx src/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "migrate": "node --env-file-if-exists=.env --import tsx src/migrate.ts",
+    "migrate:prod": "node dist/migrate.js",
+    "db:dev": "node --env-file-if-exists=.env --import tsx scripts/dev-db.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
+    "demo": "node --import tsx scripts/demo-client.ts"
+  },
+  "author": "Syed Basit Abbas",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "helmet": "^8.3.0",
+    "jose": "^6.2.12",
+    "kysely": "^0.29.6",
+    "pg": "^8.23.1",
+    "pino": "^10.4.0",
+    "pino-http": "^11.0.0",
+    "xss": "^1.0.15",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
+    "embedded-postgres": "^18.4.0-beta.17",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.13.0",
+    "pino-pretty": "^13.2.0",
+    "prettier": "^3.9.9",
+    "supertest": "^7.3.1",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  },
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.12"
+  }
+}

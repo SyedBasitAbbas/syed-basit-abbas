@@ -1,0 +1,20 @@
+node_modules/
+dist/
+coverage/
+.data/
+.tmp/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.vscode/
+.idea/
+walkthrough/
+
+# Local notes and media stay out of the repository.
+*.md
+!README.md
+*.mp4
+*.mov
+*.srt

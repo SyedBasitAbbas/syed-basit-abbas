@@ -1,0 +1,8 @@
+dist
+coverage
+node_modules
+.data
+.tmp
+package-lock.json
+*.pdf
+walkthrough
