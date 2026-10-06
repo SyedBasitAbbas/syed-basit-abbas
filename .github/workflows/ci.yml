@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ggi
+          POSTGRES_PASSWORD: ggi
+          POSTGRES_DB: ggi_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ggi -d ggi_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgres://ggi:ggi@localhost:5432/ggi_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+
+  e2e-keycloak:
+    name: End-to-end against real Keycloak
+    runs-on: ubuntu-latest
+    needs: quality
+    env:
+      NODE_ENV: development
+      PUBLIC_BASE_URL: http://localhost:3000
+      DATABASE_URL: postgres://ggi:ggi@localhost:5432/ggi
+      OIDC_ISSUER: http://localhost:8080/realms/ggi
+      OIDC_AUDIENCE: ggi-api
+      PAYMENT_FAILURE_RATE: '0'
+      MOCK_AI_MIN_LATENCY_MS: '50'
+      MOCK_AI_MAX_LATENCY_MS: '150'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Start PostgreSQL and Keycloak
+        run: docker compose up -d --wait postgres keycloak
+      - run: npm run build
+      - run: node dist/migrate.js
+      - name: Start API
+        run: |
+          nohup node dist/main.js > api.log 2>&1 &
+          for i in $(seq 1 30); do nc -z localhost 3000 && break; sleep 1; done
+      - name: Run demo client (asserting)
+        run: node --import tsx scripts/demo-client.ts --e2e
+      - name: Logs on failure
+        if: failure()
+        run: |
+          cat api.log || true
+          docker compose logs keycloak | tail -n 200

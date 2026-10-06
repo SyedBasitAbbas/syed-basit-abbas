@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+.data
+.tmp
+.env
+.env.*
+.git
+docs
+test
+keycloak
+*.md

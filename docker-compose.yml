@@ -1,0 +1,81 @@
+# Local stack: PostgreSQL + Keycloak (external OIDC provider) + the API.
+#   docker compose up --build
+# Keycloak admin console: http://localhost:8080 (admin / admin, local only).
+name: ggi-backend
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ggi
+      POSTGRES_PASSWORD: ggi
+      POSTGRES_DB: ggi
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ggi -d ggi']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    command:
+      - start-dev
+      - --import-realm
+      - --features=dpop
+      - --hostname=http://localhost:8080
+      - --health-enabled=true
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Social login (optional): create OAuth apps and export these before `up`.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-replace-me}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-replace-me}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-replace-me}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-replace-me}
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./keycloak/realm-ggi.json:/opt/keycloak/data/import/realm-ggi.json:ro
+    # The image has no curl or grep: speak HTTP over bash's /dev/tcp and check the status line.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          IFS= read -r status <&3 &&
+          case "$$status" in *" 200"*) exit 0 ;; *) exit 1 ;; esac
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  api:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    environment:
+      # Plain http for local use only; production config refuses non-https URLs.
+      NODE_ENV: development
+      PUBLIC_BASE_URL: http://localhost:3000
+      DATABASE_URL: postgres://ggi:ggi@postgres:5432/ggi
+      OIDC_ISSUER: http://localhost:8080/realms/ggi
+      # Inside the compose network Keycloak is reached by service name.
+      OIDC_JWKS_URI: http://keycloak:8080/realms/ggi/protocol/openid-connect/certs
+      OIDC_AUDIENCE: ggi-api
+      OIDC_ROLES_CLAIM: roles
+      CORS_ALLOWED_ORIGINS: http://localhost:5173
+      RATE_LIMIT_STORE: postgres
+      PAYMENT_FAILURE_RATE: '0.1'
+    ports:
+      - '3000:3000'
+
+volumes:
+  pgdata:
