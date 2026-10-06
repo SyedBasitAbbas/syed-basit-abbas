@@ -65,6 +65,26 @@ npm run dev                      # terminal 2: API on http://localhost:3000
 npm run demo
 ```
 
+### Live checks
+
+With the stack running, `npm run demo:checks -- <topic>` exercises one area against the real API
+and prints a PASS or FAIL line per check:
+
+| Topic         | Checks                                                                               |
+| ------------- | ------------------------------------------------------------------------------------ |
+| `security`    | No token, replayed or stale proofs, proofs for another URL, stolen and edited tokens |
+| `input`       | Unknown fields, mass assignment, content type, body size, CORS, HTML and SQL in text |
+| `concurrency` | Parallel questions against the free quota: exactly the remaining ones succeed        |
+| `bundles`     | The newest bundle with quota pays; cancelling moves the charge to the next one       |
+| `billing`     | Renewal, random payment declines and expiry (ends cycles in the local database)      |
+| `limits`      | Per-route limits, then `429` with `Retry-After`                                      |
+| `admin`       | Users cannot read or change other users' data; admins see everything                 |
+
+`concurrency`, `bundles` and `billing` use a newly registered account: sign up on the Keycloak
+login page as `syed.basit@example.com` / `Basit-Pass-2026`, or set `DEMO_SIGNUP_USER` and
+`DEMO_SIGNUP_PASSWORD`. `billing` waits for the billing job, so start the API with
+`BILLING_INTERVAL_MS=2000` to keep it quick.
+
 ### Tests
 
 ```bash
